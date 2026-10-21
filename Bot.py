@@ -234,7 +234,7 @@ STRINGS = {
         "choose_qty":    "ជ្រើស ចំនួន:",
         "send_link":     "ផ្ញើ Link របស់អ្នក:",
         "low_balance":   "❌ លុយមិនគ្រប់!",
-        "order_done":    "✅ បញ្ជាទិញបានជោគជ័យ!",
+        "order_done":    "✅ បញ្ជាទិញได้ជោគជ័យ!",
         "deposit_ok":    "✅ ដាក់លុយបានជោគជ័យ!",
         "qr_expired":    "⏰ QR ផុតកំណត់! សូម top up ម្ដងទៀត",
         "qr_error":      "⚠️ QR Generate Error! ទាក់ទង Admin",
@@ -248,7 +248,7 @@ STRINGS = {
         "support_msg": (
             "💬 <b>ជំនួយ & ទំនាក់ទំនង Support</b>\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "💬 សូមចុចប៊ូតុងខាងក្រោមដើម្បីឆាតសួរព័ត៌មានផ្ទាល់ជាមួយ Admin៖\n"
+            "💬 អ្នកអាចចុចប៊ូតុងខាងក្រោមដើម្បីឆាតផ្ទាល់ជាមួយ Admin៖\n"
             "👤 <b>Admin Telegram:</b> @SmeyLov008"
         ),
         "fallback": "❓ ប្រើ Menu ខាងក្រោម",
@@ -283,7 +283,7 @@ STRINGS = {
         "support_msg": (
             "💬 <b>Support & Contact</b>\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "💬 Please click the button below to chat with admin directly:\n"
+            "💬 You can click the button below to chat with admin directly:\n"
             "👤 <b>Admin Telegram:</b> @SmeyLov008"
         ),
         "fallback": "❓ Use the menu below",
@@ -1925,37 +1925,6 @@ def handle(message):
             except Exception as e:
                 bot.send_message(ADMIN_ID, f"❌ បញ្ជូនសារមិនទាន់បានទេ: {e}")
             return
-
-    if uid in livechat_users and uid != ADMIN_ID:
-        if text in ("🏠 ត្រឡប់ Menu ដើម", "🏠 Back to Menu", "🏠 Menu"):
-            livechat_users.discard(uid)
-            user_name = message.from_user.first_name or "User"
-            caption = t(uid, "welcome", user_name)
-            photo_url = "https://raw.githubusercontent.com/ngna8947-sys/SmeyLov/main/photo_url.jpg"
-            try:
-                bot.send_photo(uid, photo_url, caption=caption, parse_mode="HTML", reply_markup=main_kb(uid))
-            except:
-                bot.send_message(uid, caption, parse_mode="HTML", reply_markup=main_kb(uid))
-            return
-        
-        try:
-            user_info = users_db.get(uid_str, {})
-            name = user_info.get("name", "User")
-            username = f"@{user_info['username']}" if user_info.get("username") else "No Username"
-            
-            header = f"💬 <b>Live Chat Message</b>\n👤 <b>{name}</b> ({username})\n🆔 <code>{uid}</code>\n━━━━━━━━━━━━━━━━━━\n"
-            
-            if message.content_type == "text":
-                sent_admin_msg = bot.send_message(ADMIN_ID, header + message.text, parse_mode="HTML")
-            else:
-                bot.send_message(ADMIN_ID, header, parse_mode="HTML")
-                sent_admin_msg = bot.copy_message(chat_id=ADMIN_ID, from_chat_id=uid, message_id=message.message_id)
-            
-            livechat_sessions[str(sent_admin_msg.message_id)] = uid_str
-            _save(LIVECHAT_FILE, livechat_sessions)
-        except Exception as e:
-            logger.error(f"{CLR_RED}LiveChat error: {e}{CLR_RESET}")
-        return
 
     if uid == ADMIN_ID:
 
