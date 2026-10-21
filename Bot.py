@@ -2387,7 +2387,7 @@ def handle(message):
             return
 
         if text == "💳 ប្រាក់បញ្ញើ":
-            pend = [(k, v) for k, v in store_deps.items() if v.get("status") == "pending"]
+            pend = [(k, v) for k, v in store_deps.items() if v.get("status"] == "pending"]
             if not pend:
                 bot.send_message(uid, "✅ គ្មានការដាក់លុយ pending", reply_markup=admin_kb()); return
             lines = ["<b>💳 ប្រាក់បញ្ញើ រង់ចាំ</b>\n━━━━━━━━━━━━━━━━━━"]
@@ -2750,11 +2750,11 @@ def handle(message):
         return
 
     if text in ("💬 ជំនួយ Support", "💬 Support"):
-        livechat_users.add(uid)
+        livechat_users.discard(uid)  # ធានាថាមិនឱ្យជាប់គាំងក្នុង Live Chat mode
         
         support_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("👥 ចូលក្នុងគ្រុប Telegram", url="https://t.me/your_group_link")],
-            [InlineKeyboardButton("💬 ឆាតផ្ទាល់ជាមួយ Admin (@SmeyLov008)", url="https://t.me/SmeyLov008")]
+            [InlineKeyboardButton("💬 ឆាតផ្ទាល់ជាមួយ Admin (@SmeyLov008)", url="https://t.me/SmeyLov008")],
+            [InlineKeyboardButton("👥 ចូលក្នុងគ្រុប Telegram", url="https://t.me/your_group_link")]
         ])
         
         bot.send_message(uid, t(uid, "support_msg"), parse_mode="HTML", reply_markup=support_kb)
