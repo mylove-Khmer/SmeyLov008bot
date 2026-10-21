@@ -248,7 +248,7 @@ STRINGS = {
         "support_msg": (
             "💬 <b>ជំនួយ & ទំនាក់ទំនង Support</b>\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "💬 អ្នកអាចចុចប៊ូតុងខាងក្រោមដើម្បីឆាតផ្ទាល់ជាមួយ Admin៖\n"
+            "💬 សូមចុចប៊ូតុងខាងក្រោមដើម្បីឆាតសួរព័ត៌មានផ្ទាល់ជាមួយ Admin៖\n"
             "👤 <b>Admin Telegram:</b> @SmeyLov008"
         ),
         "fallback": "❓ ប្រើ Menu ខាងក្រោម",
@@ -283,7 +283,7 @@ STRINGS = {
         "support_msg": (
             "💬 <b>Support & Contact</b>\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "💬 You can click the button below to chat with admin directly:\n"
+            "💬 Please click the button below to chat with admin directly:\n"
             "👤 <b>Admin Telegram:</b> @SmeyLov008"
         ),
         "fallback": "❓ Use the menu below",
@@ -2750,11 +2750,10 @@ def handle(message):
         return
 
     if text in ("💬 ជំនួយ Support", "💬 Support"):
-        livechat_users.discard(uid)  # ធានាថាមិនឱ្យជាប់គាំងក្នុង Live Chat mode
+        livechat_users.discard(uid)
         
         support_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💬 ឆាតផ្ទាល់ជាមួយ Admin (@SmeyLov008)", url="https://t.me/SmeyLov008")],
-            [InlineKeyboardButton("👥 ចូលក្នុងគ្រុប Telegram", url="https://t.me/your_group_link")]
+            [InlineKeyboardButton("💬 ឆាតផ្ទាល់ជាមួយ Admin (@SmeyLov008)", url="https://t.me/SmeyLov008")]
         ])
         
         bot.send_message(uid, t(uid, "support_msg"), parse_mode="HTML", reply_markup=support_kb)
