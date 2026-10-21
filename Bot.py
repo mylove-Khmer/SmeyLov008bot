@@ -2,7 +2,7 @@
 """
 ╔══════════════════════════════════════════════════════════════╗
 ║     Kairozen All-in-One Bot v4.1 — カイロゼン                ║
-║     ហាង + SMM Panel · ដាក់លុយ KHQR                           ║
+║     ហាងរឿង (Movies Shop) + SMM Panel · ដាក់លុយ KHQR          ║
 ║     Global Discount · Panel Admin                         ║
 ║     Compatible: Python 3.10+ · Termux / Pydroid 3         ║
 ╚══════════════════════════════════════════════════════════════╝
@@ -146,23 +146,6 @@ smm_poll        = _load(SMM_POLL_FILE,  {"interval": POLL_INTERVAL})
 waiting         = {}   # uid -> step/dict
 lang_cooldown   = {}
 livechat_users  = set() # uid set of users currently in live chat mode
-
-if not products:
-    products = [
-        {"id": "netflix", "name": "Netflix Premium", "icon": "🎬",
-         "desc": "Netflix 4K UHD Account · Delivery via Auto Stock",
-         "plans": [
-             {"label": "1 Month (1 Profile)", "price": 2.50},
-             {"label": "1 Month (Full Account)", "price": 8.00}
-         ]},
-        {"id": "spotify", "name": "Spotify Premium", "icon": "🎧",
-         "desc": "Spotify Individual Upgrade · Fast Delivery",
-         "plans": [
-             {"label": "1 Month Individual", "price": 1.50},
-             {"label": "3 Months Individual", "price": 4.00}
-         ]}
-    ]
-    _save(PRODUCTS_FILE, products)
 
 # ═══════════════════════════════════════════════════════════
 #  MOVIES CONFIG (តម្លៃរឿង $1.00 ក្នុងមួយរឿង)
@@ -386,10 +369,8 @@ def main_kb(uid=None):
 
 def admin_kb():
     kb = ReplyKeyboardMarkup(resize_keyboard=True)
-    kb.row("🛍️ ផលិតផល",       "📦 ការបញ្ជាទិញ")
-    kb.row("📦 ស្តុក",         "➕ បន្ថែមស្តុក",    "➕ បន្ថែមផលិតផល")
-    kb.row("➕ បន្ថែមគ្រប់សេវាកម្ម", "🔥 បញ្ចុះតម្លៃទាំងអស់")
-    kb.row("✏️ កែតម្លៃ",       "💳 ប្រាក់បញ្ញើ")
+    kb.row("🎬 គ្រប់គ្រងរឿង",   "📦 ការបញ្ជាទិញ")
+    kb.row("🔥 បញ្ចុះតម្លៃទាំងអស់", "💳 ប្រាក់បញ្ញើ")
     kb.row("━━━ 📊 SMM ━━━")
     kb.row("📊 ការបញ្ជា SMM",  "⚙️ កំណត់ SMM API")
     kb.row("➕ បន្ថែម SMM",    "🗑️ លុប SMM")
@@ -487,81 +468,6 @@ def smm_qty_kb(slug, s):
     
     btns.append([InlineKeyboardButton("🔙 Back", callback_data="back:smmcats")])
     return InlineKeyboardMarkup(btns)
-
-def products_kb():
-    btns = []
-    for p in products:
-        total = sum(
-            len(stock.get(_stock_key(p["id"], i), []))
-            for i in range(len(p.get("plans", [])))
-        ) or len(stock.get(p["id"], []))
-        label = f"{p.get('icon','📦')} {p['name']}"
-        if total == 0:
-            label += "  ❌ អស់"
-        btns.append([InlineKeyboardButton(label, callback_data=f"prod:{p['id']}")])
-    btns.append([InlineKeyboardButton("🔙 Back", callback_data="back:main")])
-    return InlineKeyboardMarkup(btns)
-
-def plans_kb(prod_id):
-    p = _get_product(prod_id)
-    if not p: return InlineKeyboardMarkup([])
-    btns = []
-    for i, plan in enumerate(p.get("plans", [])):
-        cnt = _get_plan_stock_count(prod_id, i)
-        orig_price = float(plan['price'])
-        final_price = _calc_discounted_price(orig_price)
-        
-        if discount_config.get("active", False):
-            price_str = f"<s>${orig_price:.2f}</s> <b>${final_price:.2f}</b> 🔥"
-        else:
-            price_str = f"<b>${orig_price:.2f}</b>"
-
-        if cnt == 0:
-            label = f"❌ {plan['label']} — {price_str}  [អស់]"
-            btns.append([InlineKeyboardButton(label, callback_data=f"plan_oos:{prod_id}:{i}")])
-        else:
-            label = f"✅ {plan['label']} — {price_str}"
-            btns.append([InlineKeyboardButton(label, callback_data=f"plan:{prod_id}:{i}")])
-    btns.append([InlineKeyboardButton("🔙 Back", callback_data="back:shop")])
-    return InlineKeyboardMarkup(btns)
-
-# ═══════════════════════════════════════════════════════════
-#  PRODUCT HELPERS
-# ═══════════════════════════════════════════════════════════
-def _get_product(pid):
-    for p in products:
-        if p["id"] == pid: return p
-    return None
-
-def _stock_key(pid, plan_idx=None):
-    if plan_idx is not None:
-        return f"{pid}__{plan_idx}"
-    return pid
-
-def _get_stock(pid, plan_idx=None):
-    key = _stock_key(pid, plan_idx)
-    if plan_idx is not None and key in stock:
-        return stock.get(key, [])
-    if plan_idx is not None:
-        return stock.get(pid, [])
-    return stock.get(pid, [])
-
-def _get_plan_stock_count(pid, plan_idx):
-    key = _stock_key(pid, plan_idx)
-    return len(stock.get(key, []))
-
-def _pop_stock(pid, plan_idx=None):
-    key = _stock_key(pid, plan_idx)
-    s = stock.get(key)
-    if s is None and plan_idx is not None:
-        s = stock.get(pid, [])
-        key = pid
-    if not s:
-        return None
-    item = s.pop(0)
-    stock[key] = s
-    _save(STOCK_FILE, stock)
-    return item
 
 # ═══════════════════════════════════════════════════════════
 #  SMM HELPERS
@@ -837,48 +743,6 @@ def _send_deposit_qr(uid, amount, promo_code=None, label="💳 ដាក់ប�
 def _make_order_id():
     return f"KZ{int(time.time())%100000:05d}"
 
-def _place_store_order(uid, prod_id, plan_idx):
-    p = _get_product(prod_id)
-    if not p: return None, "❌ Product រកមិនឃើញ"
-    plans = p.get("plans", [])
-    if plan_idx >= len(plans): return None, "❌ Plan ខុស"
-    plan  = plans[plan_idx]
-    price = _calc_discounted_price(float(plan["price"]))
-    qty   = int(plan.get("qty", 1))
-    
-    if bal(uid) < price: return None, f"❌ Balance មិនគ្រប់! (Balance: ${bal(uid):.2f})"
-    
-    stock_cnt = _get_plan_stock_count(prod_id, plan_idx)
-    if stock_cnt < qty: return None, f"❌ Stock អស់ហើយ! (Available: {stock_cnt})"
-    items = [_pop_stock(prod_id, plan_idx) for _ in range(qty)]
-
-    ded_bal(uid, price)
-    oid = _make_order_id()
-    orders[oid] = {
-        "uid": str(uid), "prod_id": prod_id, "prod_name": p["name"],
-        "plan": plan["label"], "price": price, "qty": qty,
-        "items": items, "status": "delivered", "ts": int(time.time()),
-    }
-    _save(ORDERS_FILE, orders)
-    
-    remaining = _get_plan_stock_count(prod_id, plan_idx)
-    if remaining <= STOCK_ALERT_MIN:
-        try:
-            alert_txt = (
-                f"⚠️ <b>ជូនដំណឹង Stock!</b>\n"
-                f"📦 {p.get('icon','')} {p['name']} — {plan['label']}\n"
-                f"🔢 នៅសល់: <b>{remaining}</b>"
-            )
-            if remaining == 0:
-                alert_txt = (
-                    f"🚨 <b>Stock អស់ហើយ!</b>\n"
-                    f"📦 {p.get('icon','')} {p['name']} — {plan['label']}\n"
-                    f"⚠ ចូល ➕ បន្ថែមស្តុក ភ្លាម!"
-                )
-            bot.send_message(ADMIN_ID, alert_txt, parse_mode="HTML")
-        except: pass
-    return oid, None
-
 def _place_smm_order(uid, slug, qty):
     uid_str = str(uid)
     s = smm_services.get(slug)
@@ -939,9 +803,9 @@ def cmd_start(message):
         if param == "buy":
             bot.send_message(
                 uid,
-                "🛍️ <b>ហាងឌីជីថល</b>\n━━━━━━━━━━━━━━━━━━\nសូមជ្រើសរើសផលិតផលដែលអ្នកចង់ទិញ៖",
+                "🎬 <b>សូមជ្រើសរើសចំណងជើងរឿងដែលអ្នកចង់ទស្សនា៖</b>",
                 parse_mode="HTML",
-                reply_markup=products_kb()
+                reply_markup=movies_kb()
             )
             return
 
@@ -1229,207 +1093,6 @@ def cb_manual_dep(call):
         except Exception:
             pass
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("admaddall:"))
-def cb_admaddall(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    action = call.data.split(":")[1]
-
-    if action == "digital":
-        waiting[uid] = "add_product_name"
-        bot.send_message(uid, "➕ <b>បញ្ចូលឈ្មោះផលិតផលថ្មី៖</b>", parse_mode="HTML", reply_markup=cancel_kb())
-    elif action == "smm":
-        cats_kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🎵 TikTok",    callback_data="smmaddcat:TikTok"),
-             InlineKeyboardButton("📘 Facebook",  callback_data="smmaddcat:Facebook")],
-            [InlineKeyboardButton("📸 Instagram", callback_data="smmaddcat:Instagram"),
-             InlineKeyboardButton("▶ YouTube",   callback_data="smmaddcat:YouTube")],
-            [InlineKeyboardButton("📱 Telegram",  callback_data="smmaddcat:Telegram")],
-            [InlineKeyboardButton("✏️ Custom Category", callback_data="smmaddcat:custom")],
-        ])
-        bot.send_message(uid, "➕ <b>ជ្រើសរើស Category សម្រាប់ SMM Service៖</b>", parse_mode="HTML", reply_markup=cats_kb)
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("prod:"))
-def cb_prod(call):
-    uid  = call.message.chat.id
-    pid  = call.data[5:]
-    bot.answer_callback_query(call.id)
-    p = _get_product(pid)
-    if not p: return
-    lang = get_lang(uid)
-    plans = p.get("plans", [])
-    plan_lines = []
-    for i, pl in enumerate(plans):
-        cnt = _get_plan_stock_count(pid, i)
-        orig_price = float(pl['price'])
-        final_price = _calc_discounted_price(orig_price)
-        
-        if discount_config.get("active", False):
-            price_str = f"<s>${orig_price:.2f}</s> <b>${final_price:.2f}</b> 🔥"
-        else:
-            price_str = f"<b>${orig_price:.2f}</b>"
-
-        status = "✅ Available" if cnt > 0 else "❌ អស់"
-        plan_lines.append(f"  • {pl['label']} — {price_str}  {status}")
-    plans_txt = "\n".join(plan_lines) if plan_lines else "  (គ្មាន plan)"
-    txt = (f"{p.get('icon','📦')} <b>{p['name']}</b>\n"
-           f"━━━━━━━━━━━━━━━━━━\n"
-           f"📋 {p.get('desc','')}\n"
-           f"━━━━━━━━━━━━━━━━━━\n"
-           f"📦 Plans:\n{plans_txt}\n"
-           f"━━━━━━━━━━━━━━━━━━\n"
-           f"{'ជ្រើស Plan:' if lang=='kh' else 'Choose Plan:'}")
-    try: bot.edit_message_text(txt, chat_id=uid, message_id=call.message.message_id,
-                                parse_mode="HTML", reply_markup=plans_kb(pid))
-    except: bot.send_message(uid, txt, parse_mode="HTML", reply_markup=plans_kb(pid))
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("plan_oos:"))
-def cb_plan_oos(call):
-    bot.answer_callback_query(call.id, "❌ Plan នេះស្តុកអស់ហើយ! សូមរង់ចាំ Admin បន្ថែម.", show_alert=True)
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("plan:"))
-def cb_plan(call):
-    uid = call.message.chat.id
-    bot.answer_callback_query(call.id)
-    _, pid, idx = call.data.split(":")
-    idx = int(idx)
-    p   = _get_product(pid)
-    if not p: return
-    plan  = p["plans"][idx]
-    price = _calc_discounted_price(float(plan["price"]))
-    
-    waiting[uid] = {"step": "order_qty", "prod_id": pid, "plan_idx": idx, "price": price}
-    bot.send_message(uid,
-        f"🛍️ <b>{p['name']}</b> — {plan['label']} — <b>${price:.2f}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"🔢 សូមបញ្ចូលចំនួន Account (លេខតែមួយ):\nSend a numeric count of accounts:",
-        parse_mode="HTML", reply_markup=cancel_kb())
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("admprod:"))
-def cb_admprod(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    parts  = call.data.split(":", 2)
-    action = parts[1]
-    pid    = parts[2] if len(parts) > 2 else ""
-    p      = _get_product(pid)
-
-    if action == "stock":
-        p_obj = _get_product(pid)
-        plans = p_obj.get("plans", []) if p_obj else []
-        if plans:
-            lines = [f"📦 <b>{p_obj['name'] if p_obj else pid}</b> — Stock per Plan\n━━━━━━━━━━━━━━━━━━"]
-            for i, pl in enumerate(plans):
-                key   = _stock_key(pid, i)
-                items = stock.get(key, [])
-                lines.append(f"\n<b>{pl['label']}</b> ({len(items)} items)")
-                preview = "\n".join(f"• <code>{it['data'] if isinstance(it,dict) else it}</code>" for it in items[:10])
-                if preview: lines.append(preview)
-                if len(items) > 10: lines.append(f"...+{len(items)-10} more")
-            bot.send_message(uid, "\n".join(lines), parse_mode="HTML")
-        else:
-            items = _get_stock(pid)
-            if not items:
-                bot.send_message(uid, f"📦 Stock: <b>0</b> items", parse_mode="HTML"); return
-            preview = "\n".join(f"• <code>{i}</code>" for i in items[:20])
-            more    = f"\n...+{len(items)-20} more" if len(items) > 20 else ""
-            bot.send_message(uid,
-                f"📦 <b>{p['name'] if p else pid}</b> — Stock: <b>{len(items)}</b>\n"
-                f"━━━━━━━━━━━━━━━━━━\n{preview}{more}",
-                parse_mode="HTML")
-
-    elif action == "clrstock":
-        p_obj  = _get_product(pid)
-        plans  = p_obj.get("plans", []) if p_obj else []
-        all_keys = [_stock_key(pid, i) for i in range(len(plans))] + [pid]
-        total_cnt = sum(len(stock.get(k, [])) for k in all_keys)
-        kb = InlineKeyboardMarkup([[
-            InlineKeyboardButton("✅ យល់ព្រម Clear", callback_data=f"admprod:confirmclr:{pid}"),
-            InlineKeyboardButton("❌ Cancel",         callback_data=f"admprod:cancel:{pid}"),
-        ]])
-        bot.send_message(uid,
-            f"⚠️ Clear stock <b>{p['name'] if p else pid}</b>?\n"
-            f"📦 Items: <b>{total_cnt}</b> នឹងត្រូវលុប!",
-            parse_mode="HTML", reply_markup=kb)
-
-    elif action == "confirmclr":
-        p_obj = _get_product(pid)
-        plans = p_obj.get("plans", []) if p_obj else []
-        for i in range(len(plans)):
-            stock.pop(_stock_key(pid, i), None)
-        stock.pop(pid, None)
-        _save(STOCK_FILE, stock)
-        bot.send_message(uid,
-            f"✅ Stock <b>{p['name'] if p else pid}</b> cleared (all plans)!",
-            parse_mode="HTML", reply_markup=admin_kb())
-
-    elif action == "del":
-        kb = InlineKeyboardMarkup([[
-            InlineKeyboardButton("✅ យល់ព្រម Delete", callback_data=f"admprod:confirmdel:{pid}"),
-            InlineKeyboardButton("❌ Cancel",          callback_data=f"admprod:cancel:{pid}"),
-        ]])
-        cnt = len(_get_stock(pid))
-        bot.send_message(uid,
-            f"⚠️ Delete product <b>{p['name'] if p else pid}</b>?\n"
-            f"📦 Stock: <b>{cnt}</b> items នឹងត្រូវលុបផងដែរ!",
-            parse_mode="HTML", reply_markup=kb)
-
-    elif action == "confirmdel":
-        name = p["name"] if p else pid
-        plans = p.get("plans", []) if p else []
-        global products
-        products = [x for x in products if x["id"] != pid]
-        _save(PRODUCTS_FILE, products)
-        for i in range(len(plans)):
-            stock.pop(_stock_key(pid, i), None)
-        stock.pop(pid, None)
-        _save(STOCK_FILE, stock)
-        bot.send_message(uid,
-            f"✅ Product <b>{name}</b> deleted! (Stock cleared)",
-            parse_mode="HTML", reply_markup=admin_kb())
-
-    elif action == "cancel":
-        bot.send_message(uid, "❌ Cancelled", reply_markup=admin_kb())
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("delsvc:"))
-def cb_delsvc(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    parts = call.data.split(":", 2)
-
-    if len(parts) == 3 and parts[1] == "cat":
-        cat = parts[2]
-        to_del = [slug for slug, s in smm_services.items() if s.get("category") == cat]
-        for slug in to_del:
-            smm_services.pop(slug, None)
-        _save(SMM_SVC_FILE, smm_services)
-        try:
-            bot.edit_message_reply_markup(uid, call.message.message_id, reply_markup=None)
-        except: pass
-        bot.send_message(uid,
-            f"✅ Deleted <b>{len(to_del)}</b> services in <b>{cat}</b>",
-            parse_mode="HTML", reply_markup=admin_kb())
-        return
-
-    slug = parts[1]
-    s    = smm_services.get(slug)
-    if not s:
-        bot.send_message(uid, "❌ Service រកមិនឃើញ", reply_markup=admin_kb()); return
-    label  = s.get("label", slug)
-    api_id = s.get("api_id", "?")
-    smm_services.pop(slug, None)
-    _save(SMM_SVC_FILE, smm_services)
-    try:
-        bot.edit_message_reply_markup(uid, call.message.message_id, reply_markup=None)
-    except: pass
-    bot.send_message(uid,
-        f"✅ Deleted: <b>[{api_id}] {label}</b>\n"
-        f"📊 Remaining services: <b>{len(smm_services)}</b>",
-        parse_mode="HTML", reply_markup=admin_kb())
-
 @bot.callback_query_handler(func=lambda c: c.data.startswith("smmapi:"))
 def cb_smmapi(call):
     uid = call.message.chat.id
@@ -1568,217 +1231,42 @@ def cb_smmcustom(call):
         reply_markup=cancel_kb()
     )
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("addstock_prod:"))
-def cb_addstock_prod(call):
+@bot.callback_query_handler(func=lambda c: c.data.startswith("delsvc:"))
+def cb_delsvc(call):
     uid = call.message.chat.id
     if uid != ADMIN_ID: return
-    pid = call.data[len("addstock_prod:"):]
     bot.answer_callback_query(call.id)
-    p = _get_product(pid)
-    if not p:
-        bot.send_message(uid, "❌ Product រកមិនឃើញ", reply_markup=admin_kb()); return
-    
-    plans = p.get("plans", [])
-    if not plans:
+    parts = call.data.split(":", 2)
+
+    if len(parts) == 3 and parts[1] == "cat":
+        cat = parts[2]
+        to_del = [slug for slug, s in smm_services.items() if s.get("category") == cat]
+        for slug in to_del:
+            smm_services.pop(slug, None)
+        _save(SMM_SVC_FILE, smm_services)
+        try:
+            bot.edit_message_reply_markup(uid, call.message.message_id, reply_markup=None)
+        except: pass
         bot.send_message(uid,
-            f"❌ <b>{p['name']}</b> គ្មាន Plan!\nប្រើ ✏️ Edit Price ដើម្បីបន្ថែម plans ជាមុន.",
-            parse_mode="HTML", reply_markup=admin_kb()); return
-    btns = []
-    for i, pl in enumerate(plans):
-        cnt = _get_plan_stock_count(pid, i)
-        status = f"({cnt} នៅ)" if cnt > 0 else "(❌ អស់)"
-        btns.append([InlineKeyboardButton(
-            f"{pl['label']} — ${pl['price']:.2f}  {status}",
-            callback_data=f"addstock_plan:{pid}:{i}")])
-    btns.append([InlineKeyboardButton("🔙 Back", callback_data="addstock_back")])
-    bot.send_message(uid,
-        f"➕ <b>Add Stock — {p.get('icon','')} {p['name']}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\nជ្រើស Plan ដើម្បីដាក់ stock:",
-        parse_mode="HTML", reply_markup=InlineKeyboardMarkup(btns))
+            f"✅ Deleted <b>{len(to_del)}</b> services in <b>{cat}</b>",
+            parse_mode="HTML", reply_markup=admin_kb())
+        return
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith("addstock_plan:"))
-def cb_addstock_plan(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    _, pid, idx_str = call.data.split(":", 2)
-    idx = int(idx_str)
-    p   = _get_product(pid)
-    if not p: return
-    plan = p["plans"][idx]
-    waiting[uid] = {"step": "add_stock_items", "pid": pid, "plan_idx": idx}
-    cnt = _get_plan_stock_count(pid, idx)
-    bot.send_message(uid,
-        f"➕ <b>Add Stock</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📦 {p.get('icon','')} <b>{p['name']}</b>\n"
-        f"🏷️ Plan: <b>{plan['label']}</b> — ${plan['price']:.2f}\n"
-        f"📊 Stock បច្ចុប្បន្ន: <b>{cnt}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📋 <b>របៀបដាក់ Stock:</b>\n"
-        f"ផ្ញើ accounts <b>1 per line</b>\n\n"
-        f"<b>Format:</b>\n"
-        f"<code>email:password</code>\n",
-        parse_mode="HTML", reply_markup=cancel_kb())
-
-@bot.callback_query_handler(func=lambda c: c.data == "addstock_back")
-def cb_addstock_back(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    if not products:
-        bot.send_message(uid, "❌ គ្មាន Product", reply_markup=admin_kb()); return
-    btns = []
-    for p in products:
-        btns.append([InlineKeyboardButton(
-            f"{p.get('icon','📦')} {p['name']}", callback_data=f"addstock_prod:{p['id']}")])
-    bot.send_message(uid,
-        "➕ <b>Add Stock</b>\n━━━━━━━━━━━━━━━━━━\nជ្រើស Product:",
-        parse_mode="HTML", reply_markup=InlineKeyboardMarkup(btns))
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("editprice_prod:"))
-def cb_editprice_prod(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    pid = call.data[len("editprice_prod:"):]
-    bot.answer_callback_query(call.id)
-    p = _get_product(pid)
-    if not p:
-        bot.send_message(uid, "❌ Product រកមិនឃើញ", reply_markup=admin_kb()); return
-    plans = p.get("plans", [])
-    btns  = []
-    for i, pl in enumerate(plans):
-        btns.append([
-            InlineKeyboardButton(
-                f"✏️ {pl['label']} — ${pl['price']:.2f}",
-                callback_data=f"editprice_plan:{pid}:{i}"),
-            InlineKeyboardButton(
-                f"✏️ Label", callback_data=f"editlabel_plan:{pid}:{i}"),
-            InlineKeyboardButton(
-                f"🗑️", callback_data=f"delplan:{pid}:{i}"),
-        ])
-    btns.append([InlineKeyboardButton(
-        "➕ បន្ថែម Plan ថ្មី", callback_data=f"editprice_addplan:{pid}")])
-    btns.append([InlineKeyboardButton("🔙 Back", callback_data="editprice_back")])
-    bot.send_message(uid,
-        f"✏️ <b>Edit Plans — {p.get('icon','')} {p['name']}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"ចុច ✏️ Label ដើម្បីកែឈ្មោះ  |  🗑️ ដើម្បីលុប Plan:",
-        parse_mode="HTML", reply_markup=InlineKeyboardMarkup(btns))
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("editprice_plan:"))
-def cb_editprice_plan(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    _, pid, idx_str = call.data.split(":", 2)
-    idx  = int(idx_str)
-    p    = _get_product(pid)
-    if not p: return
-    plan = p["plans"][idx]
-    waiting[uid] = {"step": "edit_price_val", "pid": pid, "plan_idx": idx}
-    bot.send_message(uid,
-        f"✏️ <b>កែតម្លៃ Plan</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📦 {p.get('icon','')} <b>{p['name']}</b>\n"
-        f"🏷️ Plan: <b>{plan['label']}</b>\n"
-        f"💰 តម្លៃបច្ចុប្បន្ន: <b>${plan['price']:.2f}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"ផ្ញើ <b>តម្លៃថ្មី</b> (USD):\n"
-        f"<i>ឧ: <code>2.50</code></i>",
-        parse_mode="HTML", reply_markup=cancel_kb())
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("editprice_addplan:"))
-def cb_editprice_addplan(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    pid = call.data[len("editprice_addplan:"):]
-    bot.answer_callback_query(call.id)
-    p = _get_product(pid)
-    if not p: return
-    waiting[uid] = {"step": "edit_price_newplan_label", "pid": pid}
-    bot.send_message(uid,
-        f"➕ <b>បន្ថែម Plan ថ្មី</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📦 {p.get('icon','')} <b>{p['name']}</b>\n\n"
-        f"ផ្ញើ <b>ឈ្មោះ Plan</b>:\n"
-        f"<i>ឧ: <code>1 ខែ</code> ឬ <code>100 Accounts</code></i>",
-        parse_mode="HTML", reply_markup=cancel_kb())
-
-@bot.callback_query_handler(func=lambda c: c.data == "editprice_back")
-def cb_editprice_back(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    if not products:
-        bot.send_message(uid, "❌ គ្មាន Product", reply_markup=admin_kb()); return
-    btns = []
-    for p in products:
-        btns.append([InlineKeyboardButton(
-            f"{p.get('icon','📦')} {p['name']}", callback_data=f"editprice_prod:{p['id']}")])
-    bot.send_message(uid,
-        "✏️ <b>Edit Price / Plans</b>\n━━━━━━━━━━━━━━━━━━\nជ្រើស Product:",
-        parse_mode="HTML", reply_markup=InlineKeyboardMarkup(btns))
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("editlabel_plan:"))
-def cb_editlabel_plan(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    _, pid, idx_str = call.data.split(":", 2)
-    idx  = int(idx_str)
-    p    = _get_product(pid)
-    if not p: return
-    plan = p["plans"][idx]
-    waiting[uid] = {"step": "edit_label_val", "pid": pid, "plan_idx": idx}
-    bot.send_message(uid,
-        f"✏️ <b>កែឈ្មោះ Plan</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"📦 {p.get('icon','')} <b>{p['name']}</b>\n"
-        f"🏷️ ឈ្មោះបច្ចុប្បន្ន: <b>{plan['label']}</b>\n"
-        f"━━━━━━━━━━━━━━━━━━\n"
-        f"ផ្ញើ <b>ឈ្មោះថ្មី</b>:\n<i>ឧ: <code>1 ខែ</code></i>",
-        parse_mode="HTML", reply_markup=cancel_kb())
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("delplan:"))
-def cb_delplan(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    _, pid, idx_str = call.data.split(":", 2)
-    idx = int(idx_str)
-    p   = _get_product(pid)
-    if not p: return
-    plan = p["plans"][idx]
-    kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("✅ យល់ព្រម លុប", callback_data=f"delplan_ok:{pid}:{idx}"),
-        InlineKeyboardButton("❌ Cancel",       callback_data=f"editprice_prod:{pid}"),
-    ]])
-    bot.send_message(uid,
-        f"⚠️ លុប Plan <b>{plan['label']}</b> (${plan['price']:.2f})?",
-        parse_mode="HTML", reply_markup=kb)
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith("delplan_ok:"))
-def cb_delplan_ok(call):
-    uid = call.message.chat.id
-    if uid != ADMIN_ID: return
-    bot.answer_callback_query(call.id)
-    _, pid, idx_str = call.data.split(":", 2)
-    idx = int(idx_str)
-    p   = _get_product(pid)
-    if not p: return
-    if idx >= len(p["plans"]): return
-    label = p["plans"][idx]["label"]
-    p["plans"].pop(idx)
-    stock.pop(_stock_key(pid, idx), None)
-    _save(PRODUCTS_FILE, products)
-    _save(STOCK_FILE, stock)
-    try: bot.edit_message_text(
-        f"✅ Plan <b>{label}</b> លុបរួចហើយ!",
-        chat_id=uid, message_id=call.message.message_id, parse_mode="HTML")
+    slug = parts[1]
+    s    = smm_services.get(slug)
+    if not s:
+        bot.send_message(uid, "❌ Service រកមិនឃើញ", reply_markup=admin_kb()); return
+    label  = s.get("label", slug)
+    api_id = s.get("api_id", "?")
+    smm_services.pop(slug, None)
+    _save(SMM_SVC_FILE, smm_services)
+    try:
+        bot.edit_message_reply_markup(uid, call.message.message_id, reply_markup=None)
     except: pass
-    bot.send_message(uid, f"✅ Plan <b>{label}</b> deleted.",
-                     parse_mode="HTML", reply_markup=admin_kb())
+    bot.send_message(uid,
+        f"✅ Deleted: <b>[{api_id}] {label}</b>\n"
+        f"📊 Remaining services: <b>{len(smm_services)}</b>",
+        parse_mode="HTML", reply_markup=admin_kb())
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith("back:"))
 def cb_back(call):
@@ -1795,8 +1283,8 @@ def cb_back(call):
             bot.edit_message_caption(chat_id=uid, message_id=call.message.message_id, caption=caption, parse_mode="HTML", reply_markup=main_kb(uid))
         except:
             bot.send_message(uid, caption, parse_mode="HTML", reply_markup=main_kb(uid))
-    elif dest == "shop":
-        bot.send_message(uid, "🛍️ <b>Shop</b>", parse_mode="HTML", reply_markup=products_kb())
+    elif dest == "shop" or dest == "movies":
+        bot.send_message(uid, "🎬 <b>សូមជ្រើសរើសចំណងជើងរឿងដែលអ្នកចង់ទស្សនា៖</b>", parse_mode="HTML", reply_markup=movies_kb())
     elif dest == "smmcats":
         bot.send_message(uid, "📊 <b>SMM Services</b>", parse_mode="HTML", reply_markup=smm_cat_kb())
 
@@ -1964,16 +1452,6 @@ def handle(message):
             bot.send_message(uid, "❌ ទម្រង់មិនត្រឹមត្រូវ! ប្រើឧទាហរណ៍: <code>ON 15</code> ឬ <code>OFF</code>", parse_mode="HTML")
             return
 
-        if text == "➕ បន្ថែមគ្រប់សេវាកម្ម":
-            kb_add_all = InlineKeyboardMarkup([
-                [InlineKeyboardButton("🛍️ បន្ថែមផលិតផលឌីជីថល", callback_data="admaddall:digital")],
-                [InlineKeyboardButton("📊 បន្ថែមសេវាកម្ម SMM", callback_data="admaddall:smm")],
-            ])
-            bot.send_message(uid,
-                "➕ <b>ជ្រើសរើសប្រភេទសេវាកម្មដែលចង់បន្ថែម៖</b>\n━━━━━━━━━━━━━━━━━━",
-                parse_mode="HTML", reply_markup=kb_add_all)
-            return
-
         if text.startswith("/addbal"):
             parts = text.split()
             if len(parts) < 3:
@@ -2064,133 +1542,6 @@ def handle(message):
                 f"🎟 <code>{code}</code> — <b>{dtype}</b> | {uses} uses",
                 parse_mode="HTML", reply_markup=admin_kb()); return
 
-        if isinstance(step, dict) and step.get("step") == "add_stock_items":
-            pid      = step["pid"]
-            plan_idx = step.get("plan_idx")
-            lines = [l.strip() for l in text.strip().split("\n") if l.strip()]
-            if not lines:
-                bot.send_message(uid, "❌ គ្មានទិន្នន័យ"); return
-            key = _stock_key(pid, plan_idx)
-            if key not in stock: stock[key] = []
-            for line in lines:
-                stock[key].append({"data": line, "ts": int(time.time())})
-            _save(STOCK_FILE, stock)
-            waiting.pop(uid, None)
-            p = _get_product(pid)
-            plan_label = ""
-            if plan_idx is not None and p:
-                plans = p.get("plans", [])
-                if plan_idx < len(plans):
-                    plan_label = f" — {plans[plan_idx]['label']}"
-            bot.send_message(uid,
-                f"✅ បន្ថែម <b>{len(lines)}</b> accounts ទៅ <code>{pid}</code>{plan_label}\n"
-                f"📦 Total: <b>{len(stock[key])}</b>",
-                parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if step == "smm_add_cat":
-            waiting[uid] = {"step": "smm_add_ids", "cat": text}
-            bot.send_message(uid,
-                f"📂 Category: <b>{text}</b>\n"
-                f"ផ្ញើ API Service IDs (comma):\n"
-                f"ឧ: <code>5441,5448,5502</code>",
-                parse_mode="HTML", reply_markup=cancel_kb()); return
-
-        if isinstance(step, dict) and step.get("step") == "smm_add_ids":
-            cat = step["cat"]
-            ids = [i.strip() for i in text.replace(" ","").split(",") if i.strip().isdigit()]
-            if not ids:
-                bot.send_message(uid, "❌ ផ្ញើ IDs ជាលេខ ឧ: <code>5441,5448</code>", parse_mode="HTML"); return
-            bot.send_message(uid, f"⏳ Fetching {len(ids)} services from API...")
-            ok, fail = [], []
-            for api_id in ids:
-                info = _smm_fetch_service(api_id)
-                if info:
-                    slug = f"{cat.lower().replace(' ','_')}_{api_id}"
-                    smm_services[slug] = {
-                        "api_id": api_id, "cost_rate": info["cost_rate"],
-                        "min": info["min"], "max": info["max"],
-                        "label": _smm_clean_name(info["raw_name"]), "category": cat,
-                    }
-                    ok.append(f"✅ <code>{api_id}</code> — {smm_services[slug]['label']}")
-                else:
-                    fail.append(f"❌ <code>{api_id}</code> — not found")
-            _save(SMM_SVC_FILE, smm_services)
-            waiting.pop(uid, None)
-            msg = f"<b>📊 SMM Import — {cat}</b>\n━━━━━━━━━━━━━━━━━━\n" + "\n".join(ok)
-            if fail: msg += "\n\n<b>Failed:</b>\n" + "\n".join(fail)
-            msg += f"\n\n✅ Total services: <b>{len(smm_services)}</b>"
-            bot.send_message(uid, msg, parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if isinstance(step, dict) and step.get("step") == "edit_price_val":
-            pid      = step["pid"]
-            plan_idx = step["plan_idx"]
-            p        = _get_product(pid)
-            if not p:
-                waiting.pop(uid, None); bot.send_message(uid, "❌ Product រកមិនឃើញ", reply_markup=admin_kb()); return
-            try:
-                new_price = round(float(text.replace("$","")), 2)
-                if new_price < 0: raise ValueError
-            except:
-                bot.send_message(uid, "❌ តម្លៃខុស! ឧ: <code>2.50</code>", parse_mode="HTML"); return
-            old_price = p["plans"][plan_idx]["price"]
-            p["plans"][plan_idx]["price"] = new_price
-            _save(PRODUCTS_FILE, products)
-            waiting.pop(uid, None)
-            bot.send_message(uid,
-                f"✅ <b>តម្លៃបានកែ!</b>\n"
-                f"📦 {p.get('icon','')} <b>{p['name']}</b> — {p['plans'][plan_idx]['label']}\n"
-                f"💰 ${old_price:.2f} → <b>${new_price:.2f}</b>",
-                parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if isinstance(step, dict) and step.get("step") == "edit_label_val":
-            pid      = step["pid"]
-            plan_idx = step["plan_idx"]
-            p        = _get_product(pid)
-            if not p:
-                waiting.pop(uid, None); bot.send_message(uid, "❌ Product រកមិនឃើញ", reply_markup=admin_kb()); return
-            new_label = text.strip()
-            if not new_label:
-                bot.send_message(uid, "❌ ឈ្មោះ Plan មិនអាចទទេ!"); return
-            old_label = p["plans"][plan_idx]["label"]
-            p["plans"][plan_idx]["label"] = new_label
-            _save(PRODUCTS_FILE, products)
-            waiting.pop(uid, None)
-            bot.send_message(uid,
-                f"✅ <b>ឈ្មោះ Plan បានកែ!</b>\n"
-                f"📦 {p.get('icon','')} <b>{p['name']}</b>\n"
-                f"🏷 <b>{old_label}</b> → <b>{new_label}</b>",
-                parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if isinstance(step, dict) and step.get("step") == "edit_price_newplan_label":
-            pid   = step["pid"]
-            label = text.strip()
-            if not label:
-                bot.send_message(uid, "❌ ឈ្មោះ Plan មិនអាចទទេ!"); return
-            waiting[uid] = {"step": "edit_price_newplan_price", "pid": pid, "label": label}
-            bot.send_message(uid,
-                f"💰 Plan: <b>{label}</b>\nផ្ញើ <b>តម្លៃ</b> (USD):\n<i>ឧ: <code>2.50</code></i>",
-                parse_mode="HTML", reply_markup=cancel_kb()); return
-
-        if isinstance(step, dict) and step.get("step") == "edit_price_newplan_price":
-            pid   = step["pid"]
-            label = step["label"]
-            p     = _get_product(pid)
-            if not p:
-                waiting.pop(uid, None); bot.send_message(uid, "❌ Product រកមិនឃើញ", reply_markup=admin_kb()); return
-            try:
-                price = round(float(text.replace("$","")), 2)
-                if price < 0: raise ValueError
-            except:
-                bot.send_message(uid, "❌ តម្លៃខុស! ឧ: <code>2.50</code>", parse_mode="HTML"); return
-            p["plans"].append({"label": label, "price": price})
-            _save(PRODUCTS_FILE, products)
-            waiting.pop(uid, None)
-            bot.send_message(uid,
-                f"✅ <b>Plan ថ្មីបានបន្ថែម!</b>\n"
-                f"📦 {p.get('icon','')} <b>{p['name']}</b>\n"
-                f"🏷️ <b>{label}</b> — ${price:.2f}",
-                parse_mode="HTML", reply_markup=admin_kb()); return
-
         if step == "smm_set_profit":
             try:
                 pct = float(text)
@@ -2231,48 +1582,8 @@ def handle(message):
                     parse_mode="HTML", reply_markup=admin_kb())
             return
 
-        if step == "add_product_name":
-            waiting[uid] = {"step": "add_product_icon", "name": text}
-            bot.send_message(uid, f"<b>{text}</b>\nផ្ញើ Icon emoji (ឧ: ✂️ ឬ 💎):", parse_mode="HTML"); return
-
-        if isinstance(step, dict) and step.get("step") == "add_product_icon":
-            waiting[uid] = {"step": "add_product_desc", "name": step["name"], "icon": text}
-            bot.send_message(uid, "ផ្ញើ Description:"); return
-
-        if isinstance(step, dict) and step.get("step") == "add_product_desc":
-            pid = step["name"].lower().replace(" ","_")
-            products.append({"id": pid, "name": step["name"], "icon": step["icon"],
-                             "desc": text, "plans": []})
-            _save(PRODUCTS_FILE, products)
-            waiting.pop(uid, None)
-            bot.send_message(uid,
-                f"✅ Product <b>{step['name']}</b> បង្កើតបានរួច!\n"
-                "ប្រើ ✏️ កែតម្លៃ ដើម្បីបន្ថែម plans.",
-                parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if text == "🛍️ ផលិតផល":
-            if not products:
-                bot.send_message(uid, "❌ គ្មានផលិតផល", reply_markup=admin_kb()); return
-            for p in products:
-                plans = p.get("plans", [])
-                plans_txt = ""
-                for i, pl in enumerate(plans):
-                    cnt = _get_plan_stock_count(p["id"], i)
-                    oos = " ❌ អស់" if cnt == 0 else ""
-                    stock_label = f"ស្តុក: <b>{cnt}</b>"
-                    plans_txt += f"  • {pl['label']} — <b>${pl['price']:.2f}</b> │ {stock_label}{oos}\n"
-                if not plans_txt: plans_txt = "  (គ្មាន plan)\n"
-                kb = InlineKeyboardMarkup([
-                    [InlineKeyboardButton("📦 មើលស្តុក",      callback_data=f"admprod:stock:{p['id']}"),
-                     InlineKeyboardButton("🗑️ លុបស្តុក",      callback_data=f"admprod:clrstock:{p['id']}")],
-                    [InlineKeyboardButton("❌ លុបផលិតផល",     callback_data=f"admprod:del:{p['id']}")],
-                ])
-                bot.send_message(uid,
-                    f"{p.get('icon','📦')} <b>{p['name']}</b>\n"
-                    f"━━━━━━━━━━━━━━━━━━\n"
-                    f"🆔 ID: <code>{p['id']}</code>\n"
-                    f"💰 Plans & ស្តុក:\n{plans_txt}",
-                    parse_mode="HTML", reply_markup=kb)
+        if text == "🎬 គ្រប់គ្រងរឿង":
+            bot.send_message(uid, "🎬 <b>បញ្ជីរឿងសព្វថ្ងៃ៖</b>\n" + "\n".join([f"• {m['title']} (${m['price']:.2f})" for m in MOVIES]), parse_mode="HTML", reply_markup=admin_kb())
             return
 
         if text == "📦 ការបញ្ជាទិញ":
@@ -2280,7 +1591,7 @@ def handle(message):
                 bot.send_message(uid, "❌ គ្មានការបញ្ជាទិញ", reply_markup=admin_kb()); return
             lines = ["<b>📦 ការបញ្ជាទិញ (20 ចុងក្រោយ)</b>\n━━━━━━━━━━━━━━━━━━"]
             for oid, o in list(orders.items())[-20:]:
-                lines.append(f"🆔 <code>{oid}</code> | 👤 <code>{o['uid']}</code> | {o.get('prod_name','?')} — {o.get('plan','?')} | ${o.get('price',0):.2f}")
+                lines.append(f"🆔 <code>{oid}</code> | 👤 <code>{o['uid']}</code> | ${o.get('price',0):.2f}")
             bot.send_message(uid, "\n".join(lines)[:4000], parse_mode="HTML", reply_markup=admin_kb()); return
 
         if text == "📊 ការបញ្ជា SMM":
@@ -2354,7 +1665,6 @@ def handle(message):
             return
 
         if text == "💳 ប្រាក់បញ្ញើ":
-            # [កែតម្រូវត្រង់នេះ៖ ប្រើប្រាស់សញ្ញារង្វង់ក្រចក () ជំនួសឱ្យកွင်းក្រចក [] ត្រង់ v.get("status")]
             pend = [(k, v) for k, v in store_deps.items() if v.get("status") == "pending"]
             if not pend:
                 bot.send_message(uid, "✅ គ្មានការដាក់លុយ pending", reply_markup=admin_kb()); return
@@ -2362,53 +1672,6 @@ def handle(message):
             for k, v in pend:
                 lines.append(f"👤 <code>{v.get('uid','?')}</code> | ${v.get('amount',0):.2f}\n  /addbal {v.get('uid','?')} {v.get('amount',0):.2f}")
             bot.send_message(uid, "\n".join(lines)[:4000], parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if text == "📦 ស្តុក":
-            lines = ["<b>📦 ទិដ្ឋភាពស្តុក</b>\n━━━━━━━━━━━━━━━━━━"]
-            for p in products:
-                plans = p.get("plans", [])
-                lines.append(f"\n{p.get('icon','')} <b>{p['name']}</b>")
-                if plans:
-                    for i, pl in enumerate(plans):
-                        cnt   = _get_plan_stock_count(p["id"], i)
-                        alert = " ⚠" if 0 < cnt <= STOCK_ALERT_MIN else ""
-                        oos   = " ❌ អស់" if cnt == 0 else ""
-                        lines.append(f"  • {pl['label']} — <b>{cnt}</b>{alert}{oos}")
-                else:
-                    cnt = len(_get_stock(p["id"]))
-                    alert = " ⚠️" if 0 < cnt <= STOCK_ALERT_MIN else ""
-                    oos   = " ❌ អស់" if cnt == 0 else ""
-                    lines.append(f"  (no plan) — <b>{cnt}</b>{alert}{oos}")
-            bot.send_message(uid, "\n".join(lines), parse_mode="HTML", reply_markup=admin_kb()); return
-
-        if text == "➕ បន្ថែមស្តុក":
-            if not products:
-                bot.send_message(uid, "❌ បង្កើតផលិតផលជាមុនសិន", reply_markup=admin_kb()); return
-            btns = []
-            for p in products:
-                btns.append([InlineKeyboardButton(
-                    f"{p.get('icon','📦')} {p['name']}", callback_data=f"addstock_prod:{p['id']}")])
-            if not btns:
-                bot.send_message(uid, "❌ គ្មានផលិតផលដែលត្រូវការស្តុកទេ។", reply_markup=admin_kb()); return
-            bot.send_message(uid,
-                "➕ <b>បន្ថែមស្តុក</b>\n━━━━━━━━━━━━━━━━━━\nជ្រើសផលិតផល:",
-                parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup(btns)); return
-
-        if text == "➕ បន្ថែមផលិតផល":
-            waiting[uid] = "add_product_name"
-            bot.send_message(uid, "➕ <b>ឈ្មោះផលិតផល:</b>", parse_mode="HTML", reply_markup=cancel_kb()); return
-
-        if text == "✏️ កែតម្លៃ":
-            if not products:
-                bot.send_message(uid, "❌ គ្មានផលិតផល", reply_markup=admin_kb()); return
-            btns = []
-            for p in products:
-                btns.append([InlineKeyboardButton(
-                    f"{p.get('icon','📦')} {p['name']}", callback_data=f"editprice_prod:{p['id']}")])
-            bot.send_message(uid,
-                "✏ <b>កែតម្លៃ / Plan</b>\n━━━━━━━━━━━━━━━━━━\nជ្រើសផលិតផល:",
-                parse_mode="HTML", reply_markup=InlineKeyboardMarkup(btns)); return
 
         if text == "💸 បន្ថែមប្រាក់":
             users_sorted = sorted(users_db.items(), key=lambda x: x[1].get("last",0), reverse=True)[:15]
@@ -2447,7 +1710,7 @@ def handle(message):
         if text == "📢 ផ្សព្វផ្សាយ":
             waiting[uid] = "broadcast_msg"
             bot.send_message(uid,
-                "📢 <b>ផ្សព្វផ្សាយ</b>\nផ្ញើ Message (text/photo/video):",
+                "📢 <b>ផ្សព្វផ្សាយ</b>\nសូមផ្ញើសារ អត្ថបទ រូបភាព ឬ វីដេអូ ដែលអ្នកចង់ផ្សាយ៖",
                 parse_mode="HTML", reply_markup=cancel_kb()); return
 
         if text == "💹 ប្រាក់ចំណេញ SMM":
@@ -2555,65 +1818,6 @@ def handle(message):
             _process_deposit(uid, uid_str, amount, None)
         except:
             bot.send_message(uid, "❌ ចំនួនខុស! ឧ: <code>5.00</code>", parse_mode="HTML")
-        return
-
-    if isinstance(step, dict) and step.get("step") == "order_qty":
-        prod_id  = step["prod_id"]
-        plan_idx = step["plan_idx"]
-        unit_price = step["price"]
-        try:
-            qty = int(text.strip())
-            if qty <= 0: raise ValueError
-        except:
-            bot.send_message(uid, "❌ ចំនួនខុស! សូមបញ្ចូលលេខតែមួយ:", reply_markup=cancel_kb()); return
-        waiting.pop(uid, None)
-        p = _get_product(prod_id)
-        if not p:
-            bot.send_message(uid, "❌ Product រកមិនឃើញ", reply_markup=main_kb(uid)); return
-        plan = p.get('plans', [])[plan_idx]
-        stock_cnt = _get_plan_stock_count(prod_id, plan_idx)
-        if stock_cnt < qty:
-            bot.send_message(uid, f"❌ Stock មិនគ្រប់! មាន: <b>{stock_cnt}</b>", parse_mode="HTML", reply_markup=main_kb(uid)); return
-        final_price = round(float(unit_price) * qty, 2)
-        if bal(uid) < final_price:
-            bot.send_message(uid,
-                f"❌ Balance មិនគ្រប់!\n💳 Balance: <b>${bal(uid):.2f}</b>\n"
-                f"🛒 Need: <b>${final_price:.2f}</b>",
-                parse_mode="HTML", reply_markup=main_kb(uid)); return
-        orig_price = plan.get("price")
-        orig_qty = plan.get("qty", None)
-        plan["price"] = final_price
-        plan["qty"] = qty
-        oid, err = _place_store_order(uid, prod_id, plan_idx)
-        plan["price"] = orig_price
-        if orig_qty is None:
-            plan.pop("qty", None)
-        else:
-            plan["qty"] = orig_qty
-        if err:
-            bot.send_message(uid, err, reply_markup=main_kb(uid)); return
-        o = orders[oid]
-        items = o.get("items", [])
-        deliver_txt = (
-            f"✅ <b>បញ្ជាទិញបានជោគជ័យ!</b>\n"
-            f"━━━━━━━━━━━━━━━━━━\n"
-            f"🆔 <code>{oid}</code>\n"
-            f"📦 {p['name']} — {plan['label']}\n"
-            f"🔢 ចំនួន: <b>{qty}</b> | 💰 បានបង់: <b>${final_price:.2f}</b>"
-        )
-        deliver_txt += f"\n💳 សាច់ប្រាក់: <b>${bal(uid):.2f}</b>\n━━━━━━━━━━━━━━━━━━\n"
-        for item in items:
-            if isinstance(item, dict):
-                if "data" in item: deliver_txt += f"<code>{item['data']}</code>\n"
-                else:
-                    for k, v in item.items(): deliver_txt += f"<b>{k}</b>: <code>{v}</code>\n"
-            else:
-                deliver_txt += f"<code>{item}</code>\n"
-        bot.send_message(uid, deliver_txt, parse_mode="HTML", reply_markup=main_kb(uid))
-        try: bot.send_message(ADMIN_ID,
-            f"🛒 <b>New Order</b>\n👤 <code>{str(uid)}</code>\n"
-            f"📦 {p['name']} | {qty} | ${final_price:.2f}", parse_mode="HTML")
-        except: pass
         return
 
     if isinstance(step, dict) and step.get("step") == "smm_custom_qty":
@@ -2750,7 +1954,7 @@ def handle(message):
     bot.send_message(uid, t(uid, "fallback"), reply_markup=main_kb(uid))
 
 # ═══════════════════════════════════════════════════════════
-#  BROADCAST (Updated with Deep Linking to open shop directly)
+#  BROADCAST (Supports text, photo, video)
 # ═══════════════════════════════════════════════════════════
 def _do_broadcast(admin_uid, message):
     waiting.pop(admin_uid, None)
@@ -2759,7 +1963,7 @@ def _do_broadcast(admin_uid, message):
     
     bot_username = bot.get_me().username
     broadcast_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🛒 ទិញឥឡូវនេះ", url=f"https://t.me/{bot_username}?start=buy")]
+        [InlineKeyboardButton("🎬 មើលរឿងឥឡូវនេះ", url=f"https://t.me/{bot_username}?start=buy")]
     ])
 
     for u_id in list(users_db.keys()):
@@ -2782,10 +1986,10 @@ def _do_broadcast(admin_uid, message):
     )
 
 # ═══════════════════════════════════════════════════════════
-#  PHOTO HANDLER
+#  MEDIA HANDLERS FOR BROADCAST
 # ═══════════════════════════════════════════════════════════
-@bot.message_handler(content_types=["photo"])
-def handle_photo(message):
+@bot.message_handler(content_types=["photo", "video"])
+def handle_media(message):
     uid = message.chat.id
     if uid == ADMIN_ID and waiting.get(uid) == "broadcast_msg":
         _do_broadcast(uid, message); return
@@ -2874,7 +2078,7 @@ def print_banner():
     banner = f"""
 {CLR_CYAN}{CLR_BOLD}╔══════════════════════════════════════════════════════════════╗
 ║     {CLR_GREEN}Kairozen All-in-One Bot v4.1 — カイロゼン                {CLR_CYAN}║
-║     {CLR_YELLOW}ហាង + SMM Panel · ដាក់លុយ KHQR                           {CLR_CYAN}║
+║     {CLR_YELLOW}ហាងរឿង (Movies Shop) + SMM Panel · ដាក់លុយ KHQR          {CLR_CYAN}║
 ║     {CLR_MAGENTA}Global Discount · Panel Admin                         {CLR_CYAN}║
 ║     {CLR_WHITE}Compatible: Python 3.10+ · Termux / Pydroid 3         {CLR_CYAN}║
 ╚══════════════════════════════════════════════════════════════╝{CLR_RESET}
