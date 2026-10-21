@@ -234,7 +234,7 @@ STRINGS = {
         "choose_qty":    "ជ្រើស ចំនួន:",
         "send_link":     "ផ្ញើ Link របស់អ្នក:",
         "low_balance":   "❌ លុយមិនគ្រប់!",
-        "order_done":    "✅ បញ្ជាទិញได้ជោគជ័យ!",
+        "order_done":    "✅ បញ្ជាទិញបានជោគជ័យ!",
         "deposit_ok":    "✅ ដាក់លុយបានជោគជ័យ!",
         "qr_expired":    "⏰ QR ផុតកំណត់! សូម top up ម្ដងទៀត",
         "qr_error":      "⚠️ QR Generate Error! ទាក់ទង Admin",
@@ -1052,7 +1052,6 @@ def cb_buy_movie(call):
     price = selected_movie["price"]
     user_balance = bal(uid)
 
-    # ពិនិត្យទឹកប្រាក់ក្នុងកាបូប
     if user_balance < price:
         bot.answer_callback_query(call.id, "❌ ទឹកប្រាក់ក្នុងកាបូបរបស់អ្នកមិនគ្រប់គ្រាន់ទេ!", show_alert=True)
         
@@ -1072,7 +1071,6 @@ def cb_buy_movie(call):
         )
         return
 
-    # កាត់លុយ និងផ្ញើតំណមើលវីដេអូ
     ded_bal(uid, price)
     bot.answer_callback_query(call.id, "✅ ទិញរឿងបានជោគជ័យ!")
 
@@ -2356,7 +2354,8 @@ def handle(message):
             return
 
         if text == "💳 ប្រាក់បញ្ញើ":
-            pend = [(k, v) for k, v in store_deps.items() if v.get("status"] == "pending"]
+            # [កែតម្រូវត្រង់នេះ៖ ប្រើប្រាស់សញ្ញារង្វង់ក្រចក () ជំនួសឱ្យកွင်းក្រចក [] ត្រង់ v.get("status")]
+            pend = [(k, v) for k, v in store_deps.items() if v.get("status") == "pending"]
             if not pend:
                 bot.send_message(uid, "✅ គ្មានការដាក់លុយ pending", reply_markup=admin_kb()); return
             lines = ["<b>💳 ប្រាក់បញ្ញើ រង់ចាំ</b>\n━━━━━━━━━━━━━━━━━━"]
