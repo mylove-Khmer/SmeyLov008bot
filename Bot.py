@@ -174,6 +174,38 @@ MOVIES = [
         "desc": "សាច់រឿងអស្ចារ្យ និងឈុតឆាកប្រយុទ្ធដ៏ជក់ចិត្ត...",
         "price": 1.00,
         "video_link": "https://t.me/c/xxxx/xxxx"
+    },
+    {
+        "id": "movie4",
+        "title": "រឿងទី ៤៖ អណ្ដូងមហាសំណាង!",
+        "photo": "https://raw.githubusercontent.com/mylove-Khmer/SmeyLov008bot/main/movie4.jpg",
+        "desc": "រឿងរ៉ាវអស្ចារ្យជុំវិញអណ្តូងបុរាណដែលនាំមកនូវសំណាងដ៏នឹកស្មានមិនដល់...",
+        "price": 1.00,
+        "video_link": "https://t.me/c/xxxx/xxxx"
+    },
+    {
+        "id": "movie5",
+        "title": "រឿងទី ៥៖ អូនម៉ាប់ Cute ស្មោះស្នេហ៍",
+        "photo": "https://raw.githubusercontent.com/mylove-Khmer/SmeyLov008bot/main/movie5.jpg",
+        "desc": "ភាពយន្តស្នេហ៍កំប្លែងបែបស្រទន់ គួរឱ្យស្រឡាញ់ និងស្មោះស្ម័គ្រ...",
+        "price": 1.00,
+        "video_link": "https://t.me/c/xxxx/xxxx"
+    },
+    {
+        "id": "movie6",
+        "title": "រឿងទី ៦៖ ពីអ្នកដឹកជញ្ជូន",
+        "photo": "https://raw.githubusercontent.com/mylove-Khmer/SmeyLov008bot/main/movie6.jpg",
+        "desc": "ដំណើរជីវិតដ៏រំភើប និងការតស៊ូរបស់អ្នកដឹកជញ្ជូនម្នាក់...",
+        "price": 1.00,
+        "video_link": "https://t.me/c/xxxx/xxxx"
+    },
+    {
+        "id": "movie7",
+        "title": "រឿងទី ៧៖ ចុងភៅឆ្លងភព រកស៊ីមានបាន!",
+        "photo": "https://raw.githubusercontent.com/mylove-Khmer/SmeyLov008bot/main/movie7.jpg",
+        "desc": "ចុងភៅដៃឆៅម្នាក់បានឆ្លងភពទៅកាន់ពិភពលោកផ្សេង ហើយប្រើប្រាស់ស្នាដៃធ្វើម្ហូបដើម្បីបង្កើតមុខរបររកស៊ីមានបាន...",
+        "price": 1.00,
+        "video_link": "https://t.me/c/xxxx/xxxx"
     }
 ]
 
@@ -1665,7 +1697,7 @@ def handle(message):
             return
 
         if text == "💳 ប្រាក់បញ្ញើ":
-            pend = [(k, v) for k, v in store_deps.items() if v.get("status") == "pending"]
+            pend = [(k, v) for k, v in store_deps.items() if v.get("status"] == "pending"]
             if not pend:
                 bot.send_message(uid, "✅ គ្មានការដាក់លុយ pending", reply_markup=admin_kb()); return
             lines = ["<b>💳 ប្រាក់បញ្ញើ រង់ចាំ</b>\n━━━━━━━━━━━━━━━━━━"]
